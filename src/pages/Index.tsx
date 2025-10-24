@@ -1,14 +1,187 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import Hero from "@/components/Hero";
+import SearchForm, { SearchParams } from "@/components/SearchForm";
+import TripCard from "@/components/TripCard";
+import { calculateCostSplit } from "@/lib/pricing";
+import { toast } from "sonner";
+
+// Mock data for demonstration
+const mockTrips = [
+  {
+    id: "1",
+    driverName: "Ahmed Al-Mansouri",
+    driverRating: 4.9,
+    vehicle: "Toyota Camry 2023",
+    origin: "Dubai Marina",
+    destination: "Abu Dhabi Corniche",
+    departureTime: "08:30 AM",
+    availableSeats: 2,
+    matchScore: 0.92,
+    totalKm: 140,
+    basePrice: 15,
+    pricePerKm: 1.2
+  },
+  {
+    id: "2",
+    driverName: "Sara Mohammed",
+    driverRating: 4.8,
+    vehicle: "Honda Accord 2022",
+    origin: "Business Bay",
+    destination: "Abu Dhabi Marina Mall",
+    departureTime: "09:00 AM",
+    availableSeats: 3,
+    matchScore: 0.85,
+    totalKm: 145,
+    basePrice: 15,
+    pricePerKm: 1.15
+  },
+  {
+    id: "3",
+    driverName: "Omar Hassan",
+    driverRating: 5.0,
+    vehicle: "Tesla Model 3",
+    origin: "JBR",
+    destination: "Yas Island",
+    departureTime: "08:45 AM",
+    availableSeats: 1,
+    matchScore: 0.78,
+    totalKm: 150,
+    basePrice: 20,
+    pricePerKm: 1.3
+  }
+];
 
 const Index = () => {
+  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+  const [showResults, setShowResults] = useState(false);
+
+  const handleSearch = (params: SearchParams) => {
+    setSearchParams(params);
+    setShowResults(true);
+    toast.success(`Searching for trips from ${params.origin} to ${params.destination}...`);
+    
+    // Scroll to results
+    setTimeout(() => {
+      document.getElementById("results")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  const handleRequestSeat = (tripId: string) => {
+    toast.info("Seat request sent! Driver will be notified.", {
+      description: "You'll receive a notification when they respond."
+    });
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <Hero />
+
+      {/* Search Section */}
+      <div className="container mx-auto px-4 -mt-12 relative z-20">
+        <SearchForm onSearch={handleSearch} />
       </div>
+
+      {/* How It Works */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <StepCard 
+              number="1"
+              title="Search Your Route"
+              description="Enter your origin, destination, and travel time. We'll find trips heading your direction."
+            />
+            <StepCard 
+              number="2"
+              title="Smart Matching"
+              description="Our algorithm calculates route overlap and suggests fair pricing based on your shared journey."
+            />
+            <StepCard 
+              number="3"
+              title="Share & Save"
+              description="Request a seat, chat with your driver, and enjoy cost savings while traveling together."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Results Section */}
+      {showResults && searchParams && (
+        <section id="results" className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold mb-2">Available Trips</h2>
+              <p className="text-muted-foreground">
+                {mockTrips.length} trips found from {searchParams.origin} to {searchParams.destination}
+              </p>
+            </div>
+
+            <div className="grid gap-6 max-w-4xl mx-auto">
+              {mockTrips.map((trip) => {
+                // Calculate pricing based on match score
+                const pricing = calculateCostSplit({
+                  totalKm: trip.totalKm,
+                  basePrice: trip.basePrice,
+                  pricePerKm: trip.pricePerKm,
+                  overlapFraction: trip.matchScore,
+                  seatsRequested: searchParams.seats
+                });
+
+                return (
+                  <TripCard
+                    key={trip.id}
+                    id={trip.id}
+                    driverName={trip.driverName}
+                    driverRating={trip.driverRating}
+                    vehicle={trip.vehicle}
+                    origin={trip.origin}
+                    destination={trip.destination}
+                    departureTime={trip.departureTime}
+                    availableSeats={trip.availableSeats}
+                    matchScore={trip.matchScore}
+                    estimatedPrice={pricing.riderShare}
+                    estimatedSavings={pricing.savings}
+                    onRequest={handleRequestSeat}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* CTA Section */}
+      {!showResults && (
+        <section className="py-20 bg-gradient-to-r from-primary to-secondary text-white">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-4xl font-bold mb-4">Ready to Start Saving?</h2>
+            <p className="text-xl mb-8 text-white/90">
+              Join thousands of commuters sharing rides across the UAE
+            </p>
+            <div className="flex gap-4 justify-center flex-wrap">
+              <button className="bg-white text-primary px-8 py-4 rounded-xl font-semibold hover:bg-white/90 transition-colors">
+                Find a Ride
+              </button>
+              <button className="bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-colors border-2 border-white/20">
+                Become a Driver
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };
+
+const StepCard = ({ number, title, description }: { number: string; title: string; description: string }) => (
+  <div className="text-center">
+    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary text-white text-2xl font-bold mb-4">
+      {number}
+    </div>
+    <h3 className="text-xl font-semibold mb-3">{title}</h3>
+    <p className="text-muted-foreground">{description}</p>
+  </div>
+);
 
 export default Index;
