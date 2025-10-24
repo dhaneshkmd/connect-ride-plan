@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import SearchForm, { SearchParams } from "@/components/SearchForm";
 import TripCard from "@/components/TripCard";
@@ -74,8 +75,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
+      <Header />
+      
       {/* Hero Section */}
-      <Hero />
+      <section id="home" className="pt-16">
+        <Hero />
+      </section>
 
       {/* Search Section */}
       <div className="container mx-auto px-4 -mt-12 relative z-20">
@@ -83,7 +89,7 @@ const Index = () => {
       </div>
 
       {/* How It Works */}
-      <section className="py-16 bg-muted/30">
+      <section id="smart-matching" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
