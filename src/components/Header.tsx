@@ -1,5 +1,7 @@
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import {
   Sheet,
   SheetContent,
@@ -8,6 +10,9 @@ import {
 import logo from "@/assets/logo.png";
 
 const Header = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  
   const navItems = [
     { label: "Home", href: "#home" },
     { label: "Smart Matching", href: "#smart-matching" },
@@ -16,6 +21,11 @@ const Header = () => {
     { label: "Secure", href: "#secure" },
     { label: "Blog", href: "#blog" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -44,12 +54,26 @@ const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              Sign In
-            </Button>
-            <Button size="sm" className="bg-gradient-to-r from-primary to-secondary">
-              Get Started
-            </Button>
+            {user ? (
+              <>
+                <span className="text-sm text-muted-foreground">
+                  {user.email}
+                </span>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
+                  Sign In
+                </Button>
+                <Button size="sm" onClick={() => navigate('/auth')} className="bg-gradient-to-r from-primary to-secondary">
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu */}
@@ -71,10 +95,22 @@ const Header = () => {
                   </a>
                 ))}
                 <div className="flex flex-col gap-3 pt-6 border-t">
-                  <Button variant="ghost">Sign In</Button>
-                  <Button className="bg-gradient-to-r from-primary to-secondary">
-                    Get Started
-                  </Button>
+                  {user ? (
+                    <>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      <Button variant="ghost" onClick={handleSignOut}>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="ghost" onClick={() => navigate('/auth')}>Sign In</Button>
+                      <Button onClick={() => navigate('/auth')} className="bg-gradient-to-r from-primary to-secondary">
+                        Get Started
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </SheetContent>
