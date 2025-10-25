@@ -112,6 +112,112 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Fair Pricing */}
+      <section id="fair-pricing" className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">Fair Pricing for Everyone</h2>
+            <p className="text-xl text-muted-foreground">
+              Pay only for the distance you travel, calculated automatically based on route overlap
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <FeatureCard 
+              title="Distance-Based Pricing"
+              description="Our algorithm calculates exactly how much of the driver's route you share, so you only pay for what you use."
+            />
+            <FeatureCard 
+              title="Transparent Breakdown"
+              description="See exactly how your price is calculated: base fare + distance traveled. No hidden fees, no surge pricing."
+            />
+            <FeatureCard 
+              title="Save Up to 70%"
+              description="Compared to traditional ride services, sharing rides means splitting costs and significant savings for everyone."
+            />
+            <FeatureCard 
+              title="Driver Earnings"
+              description="Drivers earn fair compensation while reducing their commute costs. Win-win for the community."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Community */}
+      <section id="community" className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">Join Our Community</h2>
+            <p className="text-xl text-muted-foreground">
+              Thousands of commuters across the UAE trust RideShare for their daily journeys
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <StatCard number="10,000+" label="Active Users" />
+            <StatCard number="4.8★" label="Average Rating" />
+            <StatCard number="50,000+" label="Trips Completed" />
+          </div>
+        </div>
+      </section>
+
+      {/* Secure */}
+      <section id="secure" className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">Your Safety is Our Priority</h2>
+            <p className="text-xl text-muted-foreground">
+              Multiple layers of verification and security to ensure every ride is safe
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <FeatureCard 
+              title="Verified Drivers"
+              description="All drivers undergo background checks and vehicle inspections before they can offer rides."
+            />
+            <FeatureCard 
+              title="Real-Time Tracking"
+              description="Share your trip details with friends and family. They can track your journey in real-time."
+            />
+            <FeatureCard 
+              title="In-App Chat"
+              description="Communicate safely without sharing personal phone numbers. All conversations are monitored."
+            />
+            <FeatureCard 
+              title="Emergency Support"
+              description="24/7 support team and one-tap emergency assistance available throughout your journey."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Blog */}
+      <section id="blog" className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">Latest from Our Blog</h2>
+            <p className="text-xl text-muted-foreground">
+              Tips, stories, and insights from the RideShare community
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <BlogCard 
+              title="5 Tips for First-Time Riders"
+              date="March 15, 2024"
+              excerpt="New to ridesharing? Here's everything you need to know to have a great first experience."
+            />
+            <BlogCard 
+              title="How RideShare Reduces Traffic"
+              date="March 10, 2024"
+              excerpt="Discover how shared mobility is helping reduce congestion on UAE roads."
+            />
+            <BlogCard 
+              title="Driver Spotlight: Ahmed's Story"
+              date="March 5, 2024"
+              excerpt="Meet Ahmed, who's been saving 500 AED monthly on his Dubai-Abu Dhabi commute."
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Results Section */}
       {showResults && searchParams && (
         <section id="results" className="py-16">
@@ -187,6 +293,30 @@ const StepCard = ({ number, title, description }: { number: string; title: strin
     </div>
     <h3 className="text-xl font-semibold mb-3">{title}</h3>
     <p className="text-muted-foreground">{description}</p>
+  </div>
+);
+
+const FeatureCard = ({ title, description }: { title: string; description: string }) => (
+  <div className="p-6 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors">
+    <h3 className="text-xl font-semibold mb-3">{title}</h3>
+    <p className="text-muted-foreground">{description}</p>
+  </div>
+);
+
+const StatCard = ({ number, label }: { number: string; label: string }) => (
+  <div className="text-center p-8 rounded-xl bg-card border border-border">
+    <div className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
+      {number}
+    </div>
+    <div className="text-muted-foreground">{label}</div>
+  </div>
+);
+
+const BlogCard = ({ title, date, excerpt }: { title: string; date: string; excerpt: string }) => (
+  <div className="p-6 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer">
+    <div className="text-sm text-muted-foreground mb-2">{date}</div>
+    <h3 className="text-xl font-semibold mb-3">{title}</h3>
+    <p className="text-muted-foreground">{excerpt}</p>
   </div>
 );
 
