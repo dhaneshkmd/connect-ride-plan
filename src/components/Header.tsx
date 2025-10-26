@@ -14,12 +14,12 @@ const Header = () => {
   const navigate = useNavigate();
   
   const navItems = [
-    { label: "Home", href: "#home" },
-    { label: "Smart Matching", href: "#smart-matching" },
-    { label: "Fair Pricing", href: "#fair-pricing" },
-    { label: "Community", href: "#community" },
-    { label: "Secure", href: "#secure" },
-    { label: "Blog", href: "#blog" },
+    { label: "Home", href: "/" },
+    { label: "Smart Matching", href: "/smart-matching" },
+    { label: "Fair Pricing", href: "/fair-pricing" },
+    { label: "Community", href: "/community" },
+    { label: "Secure", href: "/security" },
+    { label: "Blog", href: "/blog" },
   ];
 
   const handleSignOut = async () => {
@@ -42,13 +42,23 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             {navItems.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
-              >
-                {item.label}
-              </a>
+              item.href.startsWith('/') ? (
+                <button
+                  key={item.label}
+                  onClick={() => navigate(item.href)}
+                  className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+                >
+                  {item.label}
+                </a>
+              )
             ))}
           </nav>
 
@@ -86,13 +96,23 @@ const Header = () => {
             <SheetContent>
               <div className="flex flex-col gap-6 mt-8">
                 {navItems.map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    className="text-lg font-medium text-foreground/80 hover:text-foreground transition-colors"
-                  >
-                    {item.label}
-                  </a>
+                  item.href.startsWith('/') ? (
+                    <button
+                      key={item.label}
+                      onClick={() => navigate(item.href)}
+                      className="text-lg font-medium text-foreground/80 hover:text-foreground transition-colors text-left"
+                    >
+                      {item.label}
+                    </button>
+                  ) : (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      className="text-lg font-medium text-foreground/80 hover:text-foreground transition-colors"
+                    >
+                      {item.label}
+                    </a>
+                  )
                 ))}
                 <div className="flex flex-col gap-3 pt-6 border-t">
                   {user ? (

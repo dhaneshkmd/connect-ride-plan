@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import SearchForm, { SearchParams } from "@/components/SearchForm";
@@ -313,11 +314,13 @@ const StatCard = ({ number, label }: { number: string; label: string }) => (
 );
 
 const BlogCard = ({ title, date, excerpt }: { title: string; date: string; excerpt: string }) => (
-  <div className="p-6 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer">
-    <div className="text-sm text-muted-foreground mb-2">{date}</div>
-    <h3 className="text-xl font-semibold mb-3">{title}</h3>
-    <p className="text-muted-foreground">{excerpt}</p>
-  </div>
+  <Link to="/blog">
+    <div className="p-6 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer">
+      <div className="text-sm text-muted-foreground mb-2">{date}</div>
+      <h3 className="text-xl font-semibold mb-3">{title}</h3>
+      <p className="text-muted-foreground">{excerpt}</p>
+    </div>
+  </Link>
 );
 
 export default Index;
