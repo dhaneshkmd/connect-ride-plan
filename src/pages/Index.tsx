@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import SearchForm, { SearchParams } from "@/components/SearchForm";
 import TripCard from "@/components/TripCard";
+import NaturalSearchInput from "@/components/NaturalSearchInput";
 import { calculateCostSplit } from "@/lib/pricing";
 import { toast } from "sonner";
 
@@ -85,7 +86,11 @@ const Index = () => {
       </section>
 
       {/* Search Section */}
-      <div className="container mx-auto px-4 -mt-12 relative z-20">
+      <div className="container mx-auto px-4 -mt-12 relative z-20 space-y-6">
+        <NaturalSearchInput onParsed={(params) => {
+          setSearchParams(params);
+          setShowResults(true);
+        }} />
         <SearchForm onSearch={handleSearch} />
       </div>
 

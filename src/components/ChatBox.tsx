@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { moderateMessage } from '@/lib/aiClient';
 
 interface Message {
   id: string;
@@ -94,21 +95,37 @@ const ChatBox = ({ tripId }: ChatBoxProps) => {
     if (!newMessage.trim() || !user) return;
 
     setSending(true);
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        trip_id: tripId,
-        sender_id: user.id,
-        content: newMessage.trim(),
-      });
+    try {
+      // AI moderation check
+      const modResult = await moderateMessage(newMessage.trim());
+      if (!modResult.ok) {
+        toast.error('Message blocked', {
+          description: modResult.reason || 'Your message was blocked by our safety filter.'
+        });
+        setSending(false);
+        return;
+      }
 
-    if (error) {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          trip_id: tripId,
+          sender_id: user.id,
+          content: newMessage.trim(),
+        });
+
+      if (error) {
+        toast.error('Failed to send message');
+        console.error(error);
+      } else {
+        setNewMessage('');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
       toast.error('Failed to send message');
-      console.error(error);
-    } else {
-      setNewMessage('');
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   };
 
   return (
