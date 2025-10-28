@@ -1,9 +1,149 @@
+import { useState } from "react";
 import Header from "@/components/Header";
-import { ArrowLeft, MapPin, Clock, TrendingUp, Zap } from "lucide-react";
-import { Link } from "react-router-dom";
+import SearchForm, { SearchParams } from "@/components/SearchForm";
+import TripCard from "@/components/TripCard";
+import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { getAiMatches, type TripCandidate, type MatchResult } from "@/lib/aiClient";
+import { calculateRouteOverlap } from "@/lib/geo";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 const SmartMatching = () => {
+  const [isSearching, setIsSearching] = useState(false);
+  const [matches, setMatches] = useState<Array<MatchResult & { trip: any; driver: any }>>([]);
+  const navigate = useNavigate();
+
+  const handleSearch = async (params: SearchParams) => {
+    setIsSearching(true);
+    setMatches([]);
+
+    try {
+      // Parse search time window
+      const searchDateTime = new Date(`${params.date}T${params.time}`);
+      const timeFrom = new Date(searchDateTime.getTime() - 30 * 60000).toISOString();
+      const timeTo = new Date(searchDateTime.getTime() + 30 * 60000).toISOString();
+
+      // Fetch available trips within time window
+      const { data: trips, error } = await supabase
+        .from('trips')
+        .select(`
+          *,
+          profiles!trips_driver_id_fkey (
+            full_name,
+            rating,
+            avatar_url,
+            vehicle_info
+          )
+        `)
+        .eq('status', 'scheduled')
+        .gte('available_seats', params.seats)
+        .gte('departure_time', timeFrom)
+        .lte('departure_time', timeTo);
+
+      if (error) throw error;
+
+      if (!trips || trips.length === 0) {
+        toast.info("No trips found for your search criteria");
+        setIsSearching(false);
+        return;
+      }
+
+      // Prepare candidates for AI matching
+      const candidates: TripCandidate[] = trips.map(trip => {
+        // Calculate basic route overlap (simplified for MVP)
+        const driverRoute = [
+          { lat: Number(trip.origin_lat), lng: Number(trip.origin_lng) },
+          { lat: Number(trip.destination_lat), lng: Number(trip.destination_lng) }
+        ];
+        // Note: In production, you'd geocode the search params
+        // For now, we'll use the trip's route as approximation
+        const overlapPct = 0.75; // Simplified overlap calculation
+
+        return {
+          tripId: trip.id,
+          depISO: trip.departure_time,
+          seatsFree: trip.available_seats,
+          baseAED: 50,
+          perKmAED: Number(trip.price_per_seat) / 100,
+          driver: {
+            rating: Number(trip.profiles.rating) || 5.0,
+            cancelRate: 0.05
+          },
+          meta: {
+            overlapPct,
+            detourKm: 2
+          }
+        };
+      });
+
+      // Get AI-ranked matches
+      const aiResults = await getAiMatches(
+        {
+          origin: params.origin,
+          destination: params.destination,
+          timeFrom,
+          timeTo,
+          seats: params.seats
+        },
+        candidates
+      );
+
+      // Merge AI results with trip data
+      const rankedMatches = aiResults
+        .map(result => {
+          const trip = trips.find(t => t.id === result.tripId);
+          if (!trip) return null;
+          return {
+            ...result,
+            trip,
+            driver: trip.profiles
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b!.score - a!.score);
+
+      setMatches(rankedMatches as any);
+      toast.success(`Found ${rankedMatches.length} matching trips!`);
+    } catch (error) {
+      console.error('Search error:', error);
+      toast.error("Failed to search trips. Please try again.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleRequestSeat = async (tripId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error("Please sign in to book a trip");
+      navigate('/auth');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('trip_participants')
+        .insert({
+          trip_id: tripId,
+          rider_id: user.id,
+          seats_booked: 1,
+          status: 'confirmed'
+        });
+
+      if (error) throw error;
+      
+      toast.success("Seat requested successfully!");
+      navigate('/');
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast.error("Failed to book seat. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -17,83 +157,61 @@ const SmartMatching = () => {
             </Button>
           </Link>
 
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Smart Matching Algorithm
-            </h1>
-            <p className="text-xl text-muted-foreground mb-12">
-              AI-powered route overlap detection that saves you money and time
-            </p>
-
-            <div className="space-y-8">
-              <section className="p-8 rounded-xl bg-card border border-border">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="p-3 rounded-lg bg-primary/10">
-                    <MapPin className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-semibold mb-3">Precision Route Analysis</h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      Our algorithm analyzes your starting point and destination, then compares it with available trips. 
-                      We calculate the exact overlap between routes to ensure you're matched with the most relevant rides.
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="p-8 rounded-xl bg-card border border-border">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="p-3 rounded-lg bg-secondary/10">
-                    <Clock className="h-6 w-6 text-secondary" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-semibold mb-3">Time-Optimized Matching</h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      Not just about distance - we factor in departure times, traffic patterns, and typical commute 
-                      durations to match you with rides that fit your schedule perfectly.
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="p-8 rounded-xl bg-card border border-border">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="p-3 rounded-lg bg-accent/10">
-                    <TrendingUp className="h-6 w-6 text-accent" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-semibold mb-3">Match Score System</h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      Each trip is assigned a match score from 0-100%, indicating how closely your route aligns with 
-                      the driver's journey. Higher scores mean more direct routes and better value for your money.
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="p-8 rounded-xl bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/20">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="p-3 rounded-lg bg-primary">
-                    <Zap className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-semibold mb-3">Real-Time Updates</h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      As new trips become available or conditions change, our system continuously re-evaluates matches 
-                      to show you the best options. You'll always see the most relevant and cost-effective rides.
-                    </p>
-                  </div>
-                </div>
-              </section>
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-4">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-sm font-medium">AI-Powered Matching</span>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Find Your Perfect Ride
+              </h1>
+              <p className="text-xl text-muted-foreground">
+                Our AI analyzes routes, timing, and preferences to match you with the best trips
+              </p>
             </div>
 
-            <div className="mt-12 text-center">
-              <Link to="/">
-                <Button size="lg" className="bg-gradient-to-r from-primary to-secondary">
-                  Try Smart Matching Now
-                </Button>
-              </Link>
+            {/* Search Form */}
+            <div className="mb-12">
+              <SearchForm onSearch={handleSearch} />
             </div>
+
+            {/* Loading State */}
+            {isSearching && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+                <p className="text-lg text-muted-foreground">Analyzing routes and finding best matches...</p>
+              </div>
+            )}
+
+            {/* Results */}
+            {!isSearching && matches.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-6">
+                  {matches.length} Matching {matches.length === 1 ? 'Trip' : 'Trips'} Found
+                </h2>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {matches.map((match) => (
+                    <TripCard
+                      key={match.trip.id}
+                      id={match.trip.id}
+                      driverName={match.driver.full_name}
+                      driverRating={Number(match.driver.rating)}
+                      driverAvatar={match.driver.avatar_url}
+                      vehicle={match.driver.vehicle_info?.model || "Vehicle"}
+                      origin={match.trip.origin}
+                      destination={match.trip.destination}
+                      departureTime={format(new Date(match.trip.departure_time), 'MMM d, h:mm a')}
+                      availableSeats={match.trip.available_seats}
+                      matchScore={match.score}
+                      estimatedPrice={match.estRiderShareAED}
+                      estimatedSavings={30}
+                      onRequest={handleRequestSeat}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
