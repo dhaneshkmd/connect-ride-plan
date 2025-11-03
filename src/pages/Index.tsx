@@ -279,10 +279,21 @@ const Index = () => {
               Join thousands of commuters sharing rides across the UAE
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
-              <button className="bg-white text-primary px-8 py-4 rounded-xl font-semibold hover:bg-white/90 transition-colors">
+              <button 
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  toast.info("Enter your trip details to find available rides");
+                }}
+                className="bg-white text-primary px-8 py-4 rounded-xl font-semibold hover:bg-white/90 transition-colors"
+              >
                 Find a Ride
               </button>
-              <button className="bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-colors border-2 border-white/20">
+              <button 
+                onClick={() => {
+                  toast.success("Driver registration coming soon! Sign up to get notified.");
+                }}
+                className="bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-colors border-2 border-white/20"
+              >
                 Become a Driver
               </button>
             </div>
