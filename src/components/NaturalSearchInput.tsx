@@ -1,45 +1,99 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Mic, Sparkles, Loader2 } from "lucide-react";
-import { parseNaturalRequest, speechToText } from "@/lib/aiClient";
+import { Send, Sparkles, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { SearchParams } from "./SearchForm";
+
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 interface NaturalSearchInputProps {
   onParsed: (params: SearchParams) => void;
 }
 
 const NaturalSearchInput = ({ onParsed }: NaturalSearchInputProps) => {
-  const [text, setText] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    { role: "assistant", content: "Hi! I'm here to help you find a ride. Where would you like to go?" }
+  ]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [recording, setRecording] = useState(false);
   const { toast } = useToast();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleParse = async () => {
-    if (!text.trim()) {
-      toast({
-        title: "Enter a request",
-        description: "Please describe your ride needs in natural language.",
-        variant: "destructive"
-      });
-      return;
-    }
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const parseSearchReady = (message: string): SearchParams | null => {
+    if (!message.startsWith("SEARCH_READY:")) return null;
+    
+    const params: any = {};
+    const paramsStr = message.replace("SEARCH_READY:", "").trim();
+    const pairs = paramsStr.split(",");
+    
+    pairs.forEach(pair => {
+      const [key, value] = pair.split("=").map(s => s.trim());
+      params[key] = value;
+    });
+
+    return {
+      origin: params.origin || "",
+      destination: params.destination || "",
+      date: params.date || "",
+      time: params.time || "",
+      seats: parseInt(params.seats) || 1
+    };
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+
+    const userMessage: Message = { role: "user", content: input };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInput("");
     setLoading(true);
+
     try {
-      const parsed = await parseNaturalRequest(text);
-      onParsed(parsed);
-      toast({
-        title: "Request parsed!",
-        description: "Your search form has been filled.",
+      const { data, error } = await supabase.functions.invoke('chat-search', {
+        body: { messages: updatedMessages }
       });
-      setText("");
+
+      if (error) throw error;
+
+      const aiResponse = data.message;
+      const searchParams = parseSearchReady(aiResponse);
+
+      if (searchParams) {
+        // Search is ready, trigger the search
+        onParsed(searchParams);
+        toast({
+          title: "Search Ready!",
+          description: "I found all the information needed. Searching for rides...",
+        });
+        // Reset conversation
+        setMessages([
+          { role: "assistant", content: "Hi! I'm here to help you find a ride. Where would you like to go?" }
+        ]);
+      } else {
+        // Continue conversation
+        setMessages([...updatedMessages, { role: "assistant", content: aiResponse }]);
+      }
+
     } catch (error) {
+      console.error('Chat error:', error);
       toast({
-        title: "Parse failed",
-        description: "Could not understand the request. Try being more specific.",
+        title: "Error",
+        description: "Failed to process your message. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -47,55 +101,10 @@ const NaturalSearchInput = ({ onParsed }: NaturalSearchInputProps) => {
     }
   };
 
-  const handleVoiceInput = async () => {
-    try {
-      setRecording(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        stream.getTracks().forEach(track => track.stop());
-        
-        try {
-          const transcribed = await speechToText(audioBlob);
-          setText(transcribed);
-          toast({
-            title: "Voice recorded",
-            description: "Your speech has been transcribed.",
-          });
-        } catch (error) {
-          toast({
-            title: "Transcription failed",
-            description: "Could not convert speech to text.",
-            variant: "destructive"
-          });
-        }
-        setRecording(false);
-      };
-
-      mediaRecorder.start();
-      
-      // Auto-stop after 10 seconds
-      setTimeout(() => {
-        if (mediaRecorder.state === 'recording') {
-          mediaRecorder.stop();
-        }
-      }, 10000);
-
-      toast({
-        title: "Recording...",
-        description: "Speak your ride request (max 10 seconds)",
-      });
-    } catch (error) {
-      toast({
-        title: "Microphone error",
-        description: "Could not access microphone.",
-        variant: "destructive"
-      });
-      setRecording(false);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
@@ -107,39 +116,54 @@ const NaturalSearchInput = ({ onParsed }: NaturalSearchInputProps) => {
           <h3 className="font-semibold">Ask AI to Search</h3>
         </div>
         
-        <Textarea
-          placeholder="E.g., 'I need a ride from Dubai Marina to Abu Dhabi tomorrow at 2 PM for 2 people'"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="min-h-[100px] resize-none"
-        />
+        {/* Chat Messages */}
+        <div className="bg-background/50 rounded-lg p-4 min-h-[200px] max-h-[300px] overflow-y-auto space-y-3">
+          {messages.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                  msg.role === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-foreground'
+                }`}
+              >
+                <p className="text-sm">{msg.content}</p>
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-lg px-4 py-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
         
+        {/* Input */}
         <div className="flex gap-2">
-          <Button
-            onClick={handleParse}
-            disabled={loading || !text.trim()}
+          <Input
+            placeholder="E.g., 'I want to go to Dubai'"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={loading}
             className="flex-1"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Parsing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Parse Request
-              </>
-            )}
-          </Button>
-          
+          />
           <Button
-            onClick={handleVoiceInput}
-            disabled={recording || loading}
-            variant="outline"
+            onClick={handleSend}
+            disabled={loading || !input.trim()}
             size="icon"
           >
-            <Mic className={`w-4 h-4 ${recording ? 'animate-pulse text-red-500' : ''}`} />
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
           </Button>
         </div>
       </div>
