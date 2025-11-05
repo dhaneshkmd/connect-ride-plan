@@ -1,7 +1,9 @@
 import { Car, Users, TrendingDown, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const Hero = () => {
+  const navigate = useNavigate();
   return (
     <div className="relative overflow-hidden min-h-[60vh] flex items-center">
       {/* Background image with overlay */}
@@ -29,21 +31,25 @@ const Hero = () => {
               icon={<Car className="w-8 h-8" />}
               title="Smart Matching"
               description="AI-powered route overlap detection"
+              onClick={() => navigate("/smart-matching")}
             />
             <FeatureCard 
               icon={<TrendingDown className="w-8 h-8" />}
               title="Fair Pricing"
               description="Pay only for your share"
+              onClick={() => navigate("/fair-pricing")}
             />
             <FeatureCard 
               icon={<Users className="w-8 h-8" />}
               title="Community"
               description="Verified drivers & riders"
+              onClick={() => navigate("/community")}
             />
             <FeatureCard 
               icon={<Shield className="w-8 h-8" />}
               title="Secure"
               description="Escrow payments & ratings"
+              onClick={() => navigate("/security")}
             />
           </div>
         </div>
@@ -52,8 +58,11 @@ const Hero = () => {
   );
 };
 
-const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
-  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-xl">
+const FeatureCard = ({ icon, title, description, onClick }: { icon: React.ReactNode; title: string; description: string; onClick: () => void }) => (
+  <div 
+    onClick={onClick}
+    className="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer"
+  >
     <div className="text-white mb-3">{icon}</div>
     <h3 className="font-semibold text-white mb-2">{title}</h3>
     <p className="text-sm text-white/80">{description}</p>
